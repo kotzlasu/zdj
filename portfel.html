@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Portfel</title>
+  <link rel="icon" href="icons/favicon.ico" type="image/x-icon">
+  <style>
+    :root {
+      --bg-color: #f9fafb;
+      --text-color: #333;
+      --box-bg: #ffffff;
+      --input-bg: #ffffff;
+      --saldo-color: #2e7d32;
+      --border-color: #ccc;
+    }
+
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --box-bg: #1e1e1e;
+      --input-bg: #2c2c2c;
+      --saldo-color: #81c784;
+      --border-color: #444;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      transition: background-color 0.4s ease, color 0.4s ease;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      transition: color 0.4s ease;
+    }
+
+    .saldo {
+      font-size: 26px;
+      margin-bottom: 25px;
+      text-align: center;
+      font-weight: bold;
+      color: var(--saldo-color);
+      transition: color 0.4s ease;
+    }
+
+    input {
+      padding: 12px;
+      font-size: 16px;
+      width: 100%;
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+    }
+
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+    }
+
+    button {
+      padding: 12px;
+      width: 100%;
+      font-size: 16px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s ease;
+      color: white;
+    }
+
+    button:hover {
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .add {
+      background: #4CAF50;
+    }
+
+    .add:hover {
+      background: #43a047;
+    }
+
+    .reset {
+      background: #e74c3c;
+    }
+
+    .reset:hover {
+      background: #c0392b;
+    }
+
+    .darkmode {
+      background: #607d8b;
+    }
+
+    .darkmode:hover {
+      background: #546e7a;
+    }
+
+    h3 {
+      margin-top: 30px;
+      transition: color 0.4s ease;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: var(--box-bg);
+      margin: 6px 0;
+      padding: 10px 40px 10px 10px;
+      border-left: 5px solid;
+      border-radius: 6px;
+      position: relative;
+      opacity: 0;
+      transform: translateX(-20px);
+      animation: fadeIn 0.3s forwards;
+      transition: background-color 0.2s ease;
+    }
+
+    li:hover {
+      background-color: rgba(0,0,0,0.05);
+    }
+
+    .plus { border-color: #4caf50; }
+    .minus { border-color: #e74c3c; }
+
+    .usun {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-weight: bold;
+      color: #e74c3c;
+      cursor: pointer;
+      display: none;
+    }
+
+    li:hover .usun {
+      display: inline;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💸 Mój Portfel</h1>
+  <div class="saldo">Saldo: <span id="saldo">0.00</span> zł</div>
+
+  <input type="text" id="kwota" placeholder="Wpisz kwotę (np. +100.50, -50,25)">
+  <input type="text" id="opis" placeholder="Opis (np. zakupy, wypłata)">
+
+  <button class="add" onclick="dodajTransakcje()">➕ Dodaj</button>
+  <button class="reset" onclick="resetuj()">🗑️ Resetuj</button>
+  <button class="darkmode" onclick="toggleDarkMode()">🌙 Tryb ciemny</button>
+
+  <h3>📜 Historia</h3>
+  <ul id="historia"></ul>
+
+  <script>
+    let saldo = 0;
+    let historia = [];
+
+    window.onload = () => {
+      const savedSaldo = localStorage.getItem('saldo');
+      const savedHistoria = localStorage.getItem('historia');
+      const dark = localStorage.getItem('darkmode');
+
+      if (savedSaldo) saldo = parseFloat(savedSaldo);
+      if (savedHistoria) historia = JSON.parse(savedHistoria);
+      if (dark === "true") document.body.classList.add("dark");
+
+      aktualizujUI();
+    };
+
+    function dodajTransakcje() {
+      const inputKwota = document.getElementById("kwota");
+      const inputOpis = document.getElementById("opis");
+      let wartosc = inputKwota.value.trim().replace(',', '.');
+      const opis = inputOpis.value.trim() || "Brak opisu";
+
+      if (!wartosc.match(/^[-+]\d+(\.\d{1,2})?$/)) {
+        alert("Wpisz poprawną kwotę z + lub - na początku (np. +100.50, -20,75)");
+        return;
+      }
+
+      const kwota = parseFloat(wartosc);
+      const data = new Date().toLocaleString("pl-PL");
+
+      saldo += kwota;
+      historia.unshift({ kwota, opis, data });
+
+      zapiszDane();
+      inputKwota.value = "";
+      inputOpis.value = "";
+      aktualizujUI();
+    }
+
+    function usunTransakcje(index) {
+      const lista = document.getElementById("historia");
+      const element = lista.children[index];
+      element.style.animation = "fadeOut 0.3s forwards";
+      setTimeout(() => {
+        const transakcja = historia[index];
+        saldo -= transakcja.kwota;
+        historia.splice(index, 1);
+        zapiszDane();
+        aktualizujUI();
+      }, 300);
+    }
+
+    function zapiszDane() {
+      localStorage.setItem('saldo', saldo);
+      localStorage.setItem('historia', JSON.stringify(historia));
+    }
+
+    function aktualizujUI() {
+      document.getElementById("saldo").innerText = saldo.toFixed(2);
+      const lista = document.getElementById("historia");
+      lista.innerHTML = "";
+
+      historia.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = item.kwota >= 0 ? "plus" : "minus";
+        li.innerText = `${item.kwota >= 0 ? '+' : ''}${item.kwota.toFixed(2)} zł – ${item.opis} (${item.data})`;
+
+        const usun = document.createElement("span");
+        usun.className = "usun";
+        usun.innerText = "❌";
+        usun.title = "Usuń tę transakcję";
+        usun.onclick = () => usunTransakcje(index);
+
+        li.appendChild(usun);
+        lista.appendChild(li);
+      });
+    }
+
+    function resetuj() {
+      if (confirm("Na pewno chcesz zresetować historię i saldo?")) {
+        saldo = 0;
+        historia = [];
+        localStorage.removeItem('saldo');
+        localStorage.removeItem('historia');
+        aktualizujUI();
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkmode", document.body.classList.contains("dark"));
+    }
+  </script>
+
+</body>
+</html>
